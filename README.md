@@ -151,7 +151,9 @@ docker-compose exec app cp /app/data/app.db /app/data/backup/app.db.$(date +%Y%m
 3. 如何更新应用？
 ```bash
 git pull
-docker-compose up -d --build
+#docker-compose build --build-arg https_proxy=http://192.168.196.88:7897  --build-arg http_proxy=http://192.168.196.88:7897
+docker-compose build
+docker-compose up -d
 ```
 
 ## 维护命令

@@ -1,8 +1,8 @@
 # 基础镜像
-FROM node:18 as frontend-build
+FROM node:16 as frontend-build
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps --force
 COPY frontend/ .
 RUN npm run build
 

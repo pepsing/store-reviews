@@ -23,6 +23,7 @@
     "web-vitals": "^2.1.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.16.0",
     "@craco/craco": "^6.4.5",
     "craco-less": "^2.0.0",
     "@types/react": "^17.0.75",
@@ -30,7 +31,7 @@
   },
   "scripts": {
     "start": "NODE_OPTIONS=--openssl-legacy-provider craco start",
-    "build": "NODE_OPTIONS=--openssl-legacy-provider craco build",
+    "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject"
   },
