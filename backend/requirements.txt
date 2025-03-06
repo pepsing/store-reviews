@@ -1,0 +1,21 @@
+# Python >= 3.8
+
+# FastAPI 相关
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==1.10.13
+
+# 数据库相关
+sqlalchemy==2.0.23
+alembic==1.13.0
+
+# 爬虫相关
+google-play-scraper==1.2.4
+app-store-scraper>=0.3.5
+
+# 定时任务
+apscheduler==3.10.4
+
+# 工具包
+python-dotenv==1.0.0
+requests>=2.23.0 
