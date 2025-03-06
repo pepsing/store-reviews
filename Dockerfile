@@ -21,11 +21,15 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制后端代码
 COPY backend/ .
 
-# 复制前端构建文件
-COPY --from=frontend-build /app/frontend/build /app/static
+# 复制前端构建文件到临时目录
+COPY --from=frontend-build /app/frontend/build /app/frontend_build
+
+# 添加启动脚本
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
 
 # 暴露端口
 EXPOSE 8000
 
 # 启动命令
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["/app/entrypoint.sh"]

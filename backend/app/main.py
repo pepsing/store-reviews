@@ -16,7 +16,9 @@ import urllib.parse
 # 设置日志
 logger = setup_logger("app")
 
-app = FastAPI()
+app = FastAPI(
+    redirect_slashes=False  # 禁用自动重定向尾部斜杠，避免307重定向
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +43,7 @@ async def verify_auth_code(auth_code: str = Header(..., alias="X-Auth-Code")):
         raise HTTPException(status_code=401, detail="授权码无效")
     return auth_code
 
-@app.post("/apps/")
+@app.post("/apps")
 def create_app(
     app_data: Dict[str, Any],
     db: Session = Depends(database.get_db),
@@ -60,7 +62,7 @@ def create_app(
         db.rollback()
         raise DatabaseError(f"创建应用失败: {str(e)}")
 
-@app.get("/apps/")
+@app.get("/apps")
 def get_apps(db: Session = Depends(database.get_db)):
     try:
         logger.info("获取应用列表")
