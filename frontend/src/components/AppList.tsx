@@ -120,14 +120,20 @@ export const AppList: React.FC = () => {
   };
 
   // 设置请求头
-  axios.interceptors.request.use((config: AxiosRequestConfig) => {
-    const newConfig = { ...config };
-    newConfig.headers = newConfig.headers || {};
-    if (authCode) {
-      newConfig.headers['X-Auth-Code'] = authCode;
-    }
-    return newConfig;
-  });
+  useEffect(() => {
+    const interceptor = axios.interceptors.request.use((config: AxiosRequestConfig) => {
+      const newConfig = { ...config };
+      newConfig.headers = newConfig.headers || {};
+      if (authCode) {
+        newConfig.headers['X-Auth-Code'] = authCode;
+      }
+      return newConfig;
+    });
+
+    return () => {
+      axios.interceptors.request.eject(interceptor);
+    };
+  }, [authCode]);
 
   // 添加新应用
   const handleAddApp = async (values: any) => {
@@ -543,16 +549,22 @@ export const AppList: React.FC = () => {
         visible={authModalVisible}
         onOk={async () => {
           try {
-            localStorage.setItem('authCode', authCode);
+            if (!authCode) {
+              message.error('授权码不能为空');
+              return;
+            }
             await authAction();
+            localStorage.setItem('authCode', authCode);
             setAuthModalVisible(false);
           } catch (error) {
             message.error('操作失败');
+            localStorage.removeItem('authCode');
           }
         }}
         onCancel={() => {
           setAuthModalVisible(false);
           setAuthAction(() => Promise.resolve());
+          setAuthCode('');
         }}
       >
         <Input.Password
