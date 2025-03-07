@@ -1,4 +1,4 @@
-from google_play_scraper import app, reviews_all
+from google_play_scraper import Sort, reviews_all, reviews
 from datetime import datetime, timezone
 from typing import List, Dict, Any
 from ..logger import setup_logger
@@ -36,24 +36,25 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
         
         country_code, lang = country_lang.get(country.lower(), ("us", "en-US"))
         
-        # 构建 Play Store URL
-        play_store_url = f"https://play.google.com/store/apps/details?id={app_id}&hl={lang}&gl={country_code}"
-        logger.info(f"Play Store URL: {play_store_url}")
-        
         # 打印请求参数
-        logger.info(f"Play Store 请求参数: lang={lang}, country={country_code}, sort=newest, count=50")
+        logger.info(f"Play Store 请求参数: lang={lang}, country={country_code}, sort=newest, count=7000")
         # 获取评论前记录
         logger.info("开始发送 Play Store 评论请求...")
-        result = reviews_all(
+        # result = reviews_all(
+        #     app_id,
+        #     lang=lang,
+        #     country=country_code,
+        #     sort=Sort.MOST_RELEVANT,
+        #     count=50
+        # )
+        result, _ = reviews(
             app_id,
-            lang=lang,
-            country=country_code,
-            sort='newest',
-            count=50
+            count=7000,
+            continuation_token=None # defaults to None(load from the beginning)
         )
         logger.info("Play Store 评论请求完成")
         
-        reviews = []
+        app_reviews = []
         for review in result:
             try:
                 # 确保 review['at'] 是时间戳
@@ -61,7 +62,7 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
                 if isinstance(timestamp, datetime):
                     timestamp = int(timestamp.replace(tzinfo=timezone.utc).timestamp())
                 
-                reviews.append({
+                app_reviews.append({
                     'platform': 'android',
                     'rating': review['score'],
                     'content': review['content'],
@@ -72,8 +73,8 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
                 logger.warning(f"处理评论时出错: {str(e)}, review={review}")
                 continue
         
-        logger.info(f"成功获取 {len(reviews)} 条 Play Store 评论")
-        return reviews
+        logger.info(f"成功获取 {len(app_reviews)} 条 Play Store 评论")
+        return app_reviews
         
     except Exception as e:
         logger.error(f"从 Play Store 获取评论失败: {str(e)}")

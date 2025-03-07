@@ -80,7 +80,7 @@ def get_app_reviews(app_id: int, db: Session = Depends(database.get_db)):
         if not app:
             raise HTTPException(status_code=404, detail="应用不存在")
             
-        reviews = db.query(models.Review).filter(models.Review.app_id == app_id).all()
+        reviews = db.query(models.Review).filter(models.Review.app_id == app_id).order_by(models.Review.created_at.desc()).all()
         return reviews
     except HTTPException as e:
         raise e

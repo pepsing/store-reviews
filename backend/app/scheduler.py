@@ -19,13 +19,13 @@ def update_reviews():
                 # 获取 App Store 评论
                 if app.platform in ['ios', 'both'] and app.app_store_id:
                     logger.info(f"更新 App Store 评论: app_id={app.id}")
-                    reviews = app_store.fetch_reviews(app.app_store_id)
+                    reviews = app_store.fetch_reviews(app.app_store_id, country=app.app_store_country)
                     save_reviews(db, app.id, reviews)
 
                 # 获取 Google Play 评论
                 if app.platform in ['android', 'both'] and app.play_store_id:
                     logger.info(f"更新 Google Play 评论: app_id={app.id}")
-                    reviews = play_store.fetch_reviews(app.play_store_id)
+                    reviews = play_store.fetch_reviews(app.play_store_id, country=app.play_store_country)
                     save_reviews(db, app.id, reviews)
 
             except Exception as e:
