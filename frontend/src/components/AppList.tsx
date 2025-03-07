@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Modal, Form, Input, Select, Spin, message, Popconfirm, Tabs, Pagination, Typography } from 'antd';
+import { Card, Row, Col, Button, Modal, Form, Input, Select, Spin, message, Popconfirm, Tabs, Pagination, Typography, Space } from 'antd';
 import { PlusOutlined, SyncOutlined, EditOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -21,37 +21,32 @@ interface Review {
   created_at: string;
 }
 
+interface ChartDatum {
+  date: string;
+  ios: number | null;
+  android: number | null;
+}
+
 interface RatingStats {
   date: string;
   platform: string;
   average_rating: number;
 }
 
-interface ChartDatum {
-  platform: string;
-  average_rating: number;
-  percentage?: string;
-  date?: string;
+interface PlatformStats {
+  sum: number;
+  count: number;
 }
+
+type MonthlyStatsType = {
+  [key: string]: {
+    ios: PlatformStats;
+    android: PlatformStats;
+  };
+};
 
 const { Paragraph } = Typography;
 const PAGE_SIZE = 10; // 每页显示的评论数
-
-const COUNTRIES = {
-  cn: "中国",
-  us: "美国",
-  jp: "日本",
-  kr: "韩国",
-  hk: "香港",
-  tw: "台湾",
-  sg: "新加坡",
-  my: "马来西亚",
-  id: "印度尼西亚",
-  ph: "菲律宾",
-  mm: "缅甸",
-  th: "泰国",
-  vn: "越南"
-};
 
 export const AppList: React.FC = () => {
   const [apps, setApps] = useState<App[]>([]);
@@ -69,6 +64,22 @@ export const AppList: React.FC = () => {
   const [authModalVisible, setAuthModalVisible] = useState(false);
   const [authCode, setAuthCode] = useState(localStorage.getItem('authCode') || '');
   const [authAction, setAuthAction] = useState<() => Promise<void>>(() => Promise.resolve());
+  const [countries, setCountries] = useState<{[key: string]: string}>({});
+
+  // 加载国家配置
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const response = await fetch('/config/countries.json');
+        const data = await response.json();
+        setCountries(data);
+      } catch (error) {
+        console.error('加载国家配置失败:', error);
+        message.error('加载国家配置失败');
+      }
+    };
+    loadCountries();
+  }, []);
 
   // 获取应用列表
   useEffect(() => {
@@ -170,48 +181,64 @@ export const AppList: React.FC = () => {
   };
 
   // 计算评分统计数据
-  const calculateRatingStats = (): RatingStats[] => {
-    const stats: { [key: string]: { ios: number[], android: number[] } } = {};
+  const calculateRatingStats = (): ChartDatum[] => {
+    const monthlyStats: MonthlyStatsType = {};
     
-    reviews.forEach(review => {
-      const date = review.created_at.split('T')[0];
-      if (!stats[date]) {
-        stats[date] = { ios: [], android: [] };
+    reviews.forEach((review: Review) => {
+      const date = new Date(review.created_at);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (!monthlyStats[monthKey]) {
+        monthlyStats[monthKey] = {
+          ios: { sum: 0, count: 0 },
+          android: { sum: 0, count: 0 }
+        };
       }
-      stats[date][review.platform].push(review.rating);
+      
+      monthlyStats[monthKey][review.platform].sum += review.rating;
+      monthlyStats[monthKey][review.platform].count += 1;
     });
-
-    const result: RatingStats[] = [];
-    Object.entries(stats).forEach(([date, platforms]) => {
-      if (platforms.ios.length > 0) {
-        result.push({
+    
+    // 转换为图表所需的数据格式
+    return Object.entries(monthlyStats)
+      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+      .map(([date, stats]) => {
+        const iosRating = stats.ios.count > 0 ? stats.ios.sum / stats.ios.count : null;
+        const androidRating = stats.android.count > 0 ? stats.android.sum / stats.android.count : null;
+        
+        return {
           date,
-          platform: 'iOS',
-          average_rating: platforms.ios.reduce((a, b) => a + b, 0) / platforms.ios.length
-        });
-      }
-      if (platforms.android.length > 0) {
-        result.push({
-          date,
-          platform: 'Android',
-          average_rating: platforms.android.reduce((a, b) => a + b, 0) / platforms.android.length
-        });
-      }
-    });
-
-    return result.sort((a, b) => a.date.localeCompare(b.date));
+          ios: iosRating,
+          android: androidRating
+        };
+      });
   };
 
   // 手动刷新评分
-  const handleRefreshReviews = async (appId: number) => {
+  const handleRefreshReviews = async (appId: number, platform: 'ios' | 'android') => {
     setRefreshing(true);
     try {
-      await axios.post(`/api/apps/${appId}/refresh`);
-      message.success('评分更新成功');
+      await axios.post(`/api/apps/${appId}/refresh`, { platform });
+      message.success(`${platform === 'ios' ? 'App Store' : 'Play Store'} 评分更新成功`);
       // 重新获取评论
       await fetchReviews(appId);
     } catch (error) {
-      message.error('评分更新失败');
+      message.error(`${platform === 'ios' ? 'App Store' : 'Play Store'} 评分更新失败`);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // 刷新最新评论
+  const handleRefreshLatestReviews = async (appId: number) => {
+    setRefreshing(true);
+    try {
+      await axios.post(`/api/apps/${appId}/refresh/latest`, { limit: 100 });
+      message.success('最新评论更新成功');
+      // 重新获取评论
+      await fetchReviews(appId);
+    } catch (error) {
+      message.error('最新评论更新失败');
     } finally {
       setRefreshing(false);
     }
@@ -306,23 +333,43 @@ export const AppList: React.FC = () => {
               <h3>{selectedApp.name} 评分趋势</h3>
             </Col>
             <Col>
-              <Button.Group>
+              <Space size="middle">
+                {selectedApp.platform !== 'android' && (
+                  <Button
+                    type="primary"
+                    icon={<SyncOutlined spin={refreshing} />}
+                    onClick={() => handleRefreshReviews(selectedApp.id, 'ios')}
+                    loading={refreshing}
+                  >
+                    更新 App Store
+                  </Button>
+                )}
+                {selectedApp.platform !== 'ios' && (
+                  <Button
+                    type="primary"
+                    icon={<SyncOutlined spin={refreshing} />}
+                    onClick={() => handleRefreshReviews(selectedApp.id, 'android')}
+                    loading={refreshing}
+                  >
+                    更新 Play Store
+                  </Button>
+                )}
                 <Button
-                  type="primary"
+                  type="default"
                   icon={<SyncOutlined spin={refreshing} />}
-                  onClick={() => handleRefreshReviews(selectedApp.id)}
+                  onClick={() => handleRefreshLatestReviews(selectedApp.id)}
                   loading={refreshing}
                 >
-                  更新评分
+                  刷新最新评论
                 </Button>
                 <Button
-                  type="primary"
+                  type="default"
                   icon={<DownloadOutlined />}
                   onClick={() => handleExportReviews(selectedApp.id)}
                 >
                   导出评论
                 </Button>
-              </Button.Group>
+              </Space>
             </Col>
           </Row>
           {loading ? (
@@ -336,10 +383,25 @@ export const AppList: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis domain={[0, 5]} />
-                  <Tooltip formatter={(value: number) => value.toFixed(2)} />
+                  <Tooltip 
+                    formatter={(value: number) => value ? value.toFixed(2) : '暂无数据'} 
+                    labelFormatter={(label) => `${label} 月度均分`}
+                  />
                   <Legend />
-                  <Line type="monotone" dataKey="average_rating" name="iOS" stroke="#8884d8" data={calculateRatingStats().filter(stat => stat.platform === 'iOS')} />
-                  <Line type="monotone" dataKey="average_rating" name="Android" stroke="#82ca9d" data={calculateRatingStats().filter(stat => stat.platform === 'Android')} />
+                  <Line 
+                    type="monotone" 
+                    dataKey="ios" 
+                    name="iOS" 
+                    stroke="#8884d8" 
+                    connectNulls 
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="android" 
+                    name="Android" 
+                    stroke="#82ca9d" 
+                    connectNulls 
+                  />
                 </LineChart>
               </ResponsiveContainer>
               
@@ -494,7 +556,7 @@ export const AppList: React.FC = () => {
             initialValue="cn"
           >
             <Select>
-              {Object.entries(COUNTRIES).map(([code, name]) => (
+              {Object.entries(countries).map(([code, name]) => (
                 <Select.Option key={code} value={code}>
                   {name}
                 </Select.Option>
@@ -508,7 +570,7 @@ export const AppList: React.FC = () => {
             initialValue="cn"
           >
             <Select>
-              {Object.entries(COUNTRIES).map(([code, name]) => (
+              {Object.entries(countries).map(([code, name]) => (
                 <Select.Option key={code} value={code}>
                   {name}
                 </Select.Option>

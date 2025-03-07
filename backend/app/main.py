@@ -5,13 +5,15 @@ from .scrapers import app_store, play_store
 from fastapi.middleware.cors import CORSMiddleware
 from .exceptions import AppStoreError, DatabaseError, ReviewFetchError
 from .logger import setup_logger
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import traceback
 from .config import AUTH_CODE
 import csv
 import io
 from datetime import datetime
 import urllib.parse
+from pydantic import BaseModel
+from .scheduler import update_reviews, update_latest_reviews
 
 # 设置日志
 logger = setup_logger("app")
@@ -93,83 +95,40 @@ def health_check():
     """健康检查接口"""
     return {"status": "healthy"}
 
+class RefreshRequest(BaseModel):
+    platform: Optional[str] = None
+    limit: Optional[int] = None
+
 @app.post("/apps/{app_id}/refresh")
-def refresh_app_reviews(app_id: int, db: Session = Depends(database.get_db)):
-    """手动刷新应用评分"""
-    try:
-        logger.info(f"手动刷新应用评分: app_id={app_id}")
-        app = db.query(models.App).filter(models.App.id == app_id).first()
-        if not app:
-            raise HTTPException(status_code=404, detail="应用不存在")
-        
-        # 获取现有评论的唯一标识
-        existing_reviews = db.query(
-            models.Review.platform,
-            models.Review.author,
-            models.Review.created_at
-        ).filter(
-            models.Review.app_id == app.id
-        ).all()
-        
-        # 创建唯一标识集合
-        existing_review_keys = {
-            (r.platform, r.author, r.created_at.strftime('%Y-%m-%d %H:%M:%S'))
-            for r in existing_reviews
-        }
-        
-        # 获取评论
-        if app.platform in ['ios', 'both'] and app.app_store_id:
-            # 验证 App Store ID
-            if not app.app_store_id.isdigit():
-                raise HTTPException(status_code=400, detail="无效的 App Store ID")
-            
-            reviews = app_store.fetch_reviews(
-                app.app_store_id,
-                country=app.app_store_country
-            )
-            for review_data in reviews:
-                # 创建评论的唯一标识
-                review_key = (
-                    'ios',
-                    review_data['author'],
-                    review_data['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-                )
-                
-                # 检查是否已存在
-                if review_key not in existing_review_keys:
-                    existing_review_keys.add(review_key)
-                    new_review = models.Review(app_id=app.id, **review_data)
-                    db.add(new_review)
-        
-        if app.platform in ['android', 'both'] and app.play_store_id:
-            reviews = play_store.fetch_reviews(
-                app.play_store_id,
-                country=app.play_store_country
-            )
-            for review_data in reviews:
-                # 创建评论的唯一标识
-                review_key = (
-                    'android',
-                    review_data['author'],
-                    review_data['created_at'].strftime('%Y-%m-%d %H:%M:%S')
-                )
-                
-                # 检查是否已存在
-                if review_key not in existing_review_keys:
-                    existing_review_keys.add(review_key)
-                    new_review = models.Review(app_id=app.id, **review_data)
-                    db.add(new_review)
-        
-        db.commit()
-        logger.info(f"应用评分刷新成功: app_id={app_id}")
-        return {"message": "评分更新成功"}
-        
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"刷新应用评分失败: {str(e)}\n{traceback.format_exc()}")
-        db.rollback()
-        raise DatabaseError(f"刷新应用评分失败: {str(e)}")
+async def refresh_app_reviews(
+    app_id: int,
+    refresh_data: RefreshRequest,
+    auth_code: str = Header(..., alias="X-Auth-Code")
+):
+    """
+    刷新应用评论
+    :param app_id: 应用ID
+    :param platform: 平台（ios/android），不指定则刷新所有平台
+    """
+    await verify_auth_code(auth_code)
+    update_reviews(app_id=app_id, platform=refresh_data.platform)
+    return {"message": "更新任务已开始"}
+
+@app.post("/apps/{app_id}/refresh/latest")
+async def refresh_latest_reviews(
+    app_id: int,
+    refresh_data: RefreshRequest,
+    auth_code: str = Header(..., alias="X-Auth-Code")
+):
+    """
+    刷新最新评论（默认每个平台100条）
+    :param app_id: 应用ID
+    :param limit: 限制获取的评论数量
+    """
+    await verify_auth_code(auth_code)
+    limit = refresh_data.limit or 100
+    update_latest_reviews(app_id=app_id, limit=limit)
+    return {"message": "最新评论更新任务已开始"}
 
 @app.put("/apps/{app_id}")
 def update_app(

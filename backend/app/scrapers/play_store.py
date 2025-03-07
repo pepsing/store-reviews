@@ -6,16 +6,17 @@ from ..exceptions import PlayStoreError
 
 logger = setup_logger("play_store_scraper")
 
-def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
+def fetch_reviews(app_id: str, country: str = "cn", limit: int = None) -> List[Dict[str, Any]]:
     """
     从 Google Play 抓取评论数据
     
     参数:
         app_id: Play Store ID
         country: 国家/地区代码
+        limit: 限制获取的评论数量
     """
     try:
-        logger.info(f"开始获取 Play Store 评论: app_id={app_id}, country={country}")
+        logger.info(f"开始获取 Play Store 评论: app_id={app_id}, country={country}, limit={limit}")
         
         # 国家代码映射
         country_lang = {
@@ -37,19 +38,12 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
         country_code, lang = country_lang.get(country.lower(), ("us", "en-US"))
         
         # 打印请求参数
-        logger.info(f"Play Store 请求参数: lang={lang}, country={country_code}, sort=newest, count=7000")
+        logger.info(f"Play Store 请求参数: lang={lang}, country={country_code}, sort=newest, count={limit or 7000}")
         # 获取评论前记录
         logger.info("开始发送 Play Store 评论请求...")
-        # result = reviews_all(
-        #     app_id,
-        #     lang=lang,
-        #     country=country_code,
-        #     sort=Sort.MOST_RELEVANT,
-        #     count=50
-        # )
         result, _ = reviews(
             app_id,
-            count=7000,
+            count=min(limit, 7000) if limit else 7000,  # 限制最大获取数量为7000
             continuation_token=None # defaults to None(load from the beginning)
         )
         logger.info("Play Store 评论请求完成")
@@ -69,6 +63,10 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
                     'author': review['userName'],
                     'created_at': datetime.fromtimestamp(timestamp)
                 })
+                
+                if limit and len(app_reviews) >= limit:
+                    break
+                    
             except Exception as e:
                 logger.warning(f"处理评论时出错: {str(e)}, review={review}")
                 continue

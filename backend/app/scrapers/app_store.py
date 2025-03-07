@@ -7,10 +7,15 @@ from functools import wraps
 
 logger = setup_logger("app_store_scraper")
 
-def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
-    """获取 App Store 评论"""
+def fetch_reviews(app_id: str, country: str = "cn", limit: int = None) -> List[Dict[str, Any]]:
+    """
+    获取 App Store 评论
+    :param app_id: App Store ID
+    :param country: 国家/地区代码
+    :param limit: 限制获取的评论数量
+    """
     try:
-        logger.info(f"开始获取 App Store 评论: app_id={app_id}, country={country}")
+        logger.info(f"开始获取 App Store 评论: app_id={app_id}, country={country}, limit={limit}")
         
         # 检查 app_id 格式
         if not app_id.isdigit():
@@ -23,10 +28,11 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
         )
         
         # 打印请求信息
-        logger.info(f"App Store 请求参数: country={country}, app_id={app_id}")
+        logger.info(f"App Store 请求参数: country={country}, app_id={app_id}, limit={limit}")
         # 获取评论前记录
         logger.info("开始发送 App Store 评论请求...")
-        app.review(how_many=3000)  # 限制获取的评论数量
+        how_many = min(limit, 3000) if limit else 3000  # 限制最大获取数量为3000
+        app.review(how_many=how_many)
         logger.info(f"App Store 评论请求完成，评论数={app.reviews_count}")
         reviews = []
         
@@ -46,6 +52,9 @@ def fetch_reviews(app_id: str, country: str = "cn") -> List[Dict[str, Any]]:
                 'author': review['userName'],
                 'created_at': created_at
             })
+            
+            if limit and len(reviews) >= limit:
+                break
         
         logger.info(f"成功获取 {len(reviews)} 条 App Store 评论")
         return reviews

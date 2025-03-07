@@ -22,5 +22,5 @@ class Review(Base):
     platform = Column(Enum('ios', 'android'), nullable=False)
     rating = Column(Float, nullable=False)
     content = Column(String)
-    author = Column(String)
+    author = Column(String) # 用户名
     created_at = Column(DateTime(timezone=True), nullable=False) 
