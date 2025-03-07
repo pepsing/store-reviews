@@ -6,6 +6,8 @@
 
 - 支持 iOS 和 Android 双平台
 - 实时抓取最新评论
+- 分平台独立更新评论
+- 增量更新最新评论
 - 评分趋势图表展示
 - 多国家/地区支持
 - 评论分页和展开/收起
@@ -94,6 +96,16 @@ docker-compose up -d --build
 - `DELETE /api/apps/{app_id}`: 删除应用
 - `GET /api/apps/{app_id}/reviews`: 获取应用评论
 - `POST /api/apps/{app_id}/refresh`: 刷新应用评论
+  - 参数：
+    - `platform`: 可选，指定平台（ios/android）
+    - `limit`: 可选，限制获取的评论数量
+- `POST /api/apps/{app_id}/refresh/latest`: 刷新最新评论
+  - 参数：
+    - `limit`: 可选，限制获取的评论数量（默认100条）
+- `GET /api/apps/{app_id}/export`: 导出评论为 CSV
+
+### 自动更新
+系统会在每天凌晨 2 点自动获取每个应用最新的 100 条评论。
 
 ### 授权
 需要在请求头中添加 `X-Auth-Code` 进行授权：
