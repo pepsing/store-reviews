@@ -1,0 +1,17 @@
+{
+  "countries": [
+    {"code": "cn", "name": "中国"},
+    {"code": "us", "name": "美国"},
+    {"code": "jp", "name": "日本"},
+    {"code": "kr", "name": "韩国"},
+    {"code": "hk", "name": "香港"},
+    {"code": "tw", "name": "台湾"},
+    {"code": "sg", "name": "新加坡"},
+    {"code": "my", "name": "马来西亚"},
+    {"code": "id", "name": "印度尼西亚"},
+    {"code": "ph", "name": "菲律宾"},
+    {"code": "mm", "name": "缅甸"},
+    {"code": "th", "name": "泰国"},
+    {"code": "vn", "name": "越南"}
+  ]
+} 
