@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://reviews.digix.icu/api/:path*"
+      "destination": "http://43.156.243.177:8001/api/:path*"
     },
     {
       "source": "/config/:path*",
@@ -14,11 +14,11 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://reviews.digix.icu/"
+    "REACT_APP_API_URL": "http://43.156.243.177:8001"
   },
   "build": {
     "env": {
-      "REACT_APP_API_URL": "https://reviews.digix.icu/"
+      "REACT_APP_API_URL": "http://43.156.243.177:8001"
     }
   },
   "buildCommand": "NODE_OPTIONS=--openssl-legacy-provider craco build",
