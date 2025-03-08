@@ -12,5 +12,7 @@
     "env": {
       "REACT_APP_API_URL": "https://your-api-domain.com"
     }
-  }
+  },
+  "buildCommand": "NODE_OPTIONS=--openssl-legacy-provider craco build",
+  "outputDirectory": "build"
 } 
