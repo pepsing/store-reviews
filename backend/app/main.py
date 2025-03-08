@@ -14,6 +14,7 @@ from datetime import datetime
 import urllib.parse
 from pydantic import BaseModel
 from .scheduler import update_reviews, update_latest_reviews
+import os
 
 # 设置日志
 logger = setup_logger("app")
@@ -24,7 +25,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",  # 本地开发环境
+        "https://*.vercel.app",   # Vercel 预览环境
+        os.getenv("FRONTEND_URL", ""),  # 生产环境前端 URL
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

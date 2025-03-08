@@ -1,0 +1,18 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_API_URL": "https://your-api-domain.com",
+    "REACT_APP_AUTH_CODE": "@auth_code"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_API_URL": "https://your-api-domain.com",
+      "REACT_APP_AUTH_CODE": "@auth_code"
+    }
+  }
+} 

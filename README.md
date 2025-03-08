@@ -57,6 +57,7 @@ pip install -r requirements.txt
 
 4. 初始化数据库
 ```bash
+mkdir data
 python -m app.database.init_db
 ```
 
