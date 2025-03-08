@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://reviews.digix.icu/api/:path*"
+    },
+    {
       "source": "/config/:path*",
       "destination": "/config/:path*"
     },
@@ -10,11 +14,11 @@
     }
   ],
   "env": {
-    "REACT_APP_API_URL": "https://your-api-domain.com"
+    "REACT_APP_API_URL": "https://reviews.digix.icu/"
   },
   "build": {
     "env": {
-      "REACT_APP_API_URL": "https://your-api-domain.com"
+      "REACT_APP_API_URL": "https://reviews.digix.icu/"
     }
   },
   "buildCommand": "NODE_OPTIONS=--openssl-legacy-provider craco build",

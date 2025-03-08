@@ -1,3 +1,4 @@
 export const getApiBaseUrl = () => {
-  return process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  // 使用相对路径，这样会根据当前域名自动拼接
+  return '/api';
 }; 
