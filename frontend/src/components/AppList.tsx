@@ -65,17 +65,28 @@ export const AppList: React.FC = () => {
   const [authCode, setAuthCode] = useState(localStorage.getItem('authCode') || '');
   const [authAction, setAuthAction] = useState<() => Promise<void>>(() => Promise.resolve());
   const [countries, setCountries] = useState<{[key: string]: string}>({});
+  const [loadingCountries, setLoadingCountries] = useState(true);
 
   // 加载国家配置
   useEffect(() => {
     const loadCountries = async () => {
+      setLoadingCountries(true);
       try {
         const response = await fetch('/config/countries.json');
+        if (!response.ok) {
+          throw new Error('Failed to fetch countries');
+        }
         const data = await response.json();
-        setCountries(data);
+        const countryMap = data.countries.reduce((acc: {[key: string]: string}, item: {code: string, name: string}) => {
+          acc[item.code] = item.name;
+          return acc;
+        }, {});
+        setCountries(countryMap);
       } catch (error) {
         console.error('加载国家配置失败:', error);
         message.error('加载国家配置失败');
+      } finally {
+        setLoadingCountries(false);
       }
     };
     loadCountries();
@@ -555,7 +566,7 @@ export const AppList: React.FC = () => {
             label="App Store 地区"
             initialValue="cn"
           >
-            <Select>
+            <Select loading={loadingCountries}>
               {Object.entries(countries).map(([code, name]) => (
                 <Select.Option key={code} value={code}>
                   {name}
@@ -569,7 +580,7 @@ export const AppList: React.FC = () => {
             label="Play Store 地区"
             initialValue="cn"
           >
-            <Select>
+            <Select loading={loadingCountries}>
               {Object.entries(countries).map(([code, name]) => (
                 <Select.Option key={code} value={code}>
                   {name}
